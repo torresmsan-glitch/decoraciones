@@ -78,13 +78,11 @@ if (porId[location.hash.slice(1)]) {
 // Enlaces "Quiero una así" ya escritos en la pagina
 document.querySelectorAll("[data-quiero]").forEach((a) => { a.href = quieroUna(a.dataset.quiero); });
 
-// Indice: que celebras -> los montajes de esa ocasion, cada uno abre su visor
+// Indice: que celebras -> las tarjetas de esa ocasion, cada una abre su visor
 (() => {
-  const lista = document.querySelector(".lista");
+  const lista = document.querySelector(".tarjetas");
   const filtros = document.querySelector(".filtros");
   const contador = document.querySelector(".contador");
-  const vistazoImg = document.querySelector(".vistazo img");
-  const vistazoTexto = document.querySelector(".vistazo p");
   if (!lista) return;
   const orden = Object.keys(CATEGORIAS);
   const decoraciones = [...DECORACIONES].sort((a, b) => orden.indexOf(a.cat) - orden.indexOf(b.cat));
@@ -95,16 +93,11 @@ document.querySelectorAll("[data-quiero]").forEach((a) => { a.href = quieroUna(a
   const pintar = (cat) => {
     const elegidas = decoraciones.filter((d) => !cat || d.cat === cat);
     lista.innerHTML = elegidas.map((d) =>
-      `<li><button type="button" data-abrir="${d.id}" data-vistazo="${d.id}"><span>${d.titulo}</span><span>${d.fotos.length} fotos</span></button></li>`).join("");
+      `<li class="tarjeta"><button type="button" data-abrir="${d.id}">
+        <figure><img src="${d.fotos[0].src}-600.webp" width="600" height="${Math.round(600 * d.fotos[0].p)}" loading="lazy" alt="${d.titulo}"></figure>
+        <span class="tarjeta-nombre">${d.titulo}<small>${d.fotos.length} fotos</small></span>
+        <span class="tarjeta-detalle">${d.detalle}</span></button></li>`).join("");
     contador.textContent = `${elegidas.length} montajes${cat ? ` de ${CATEGORIAS[cat].toLowerCase()}` : ""}`;
-    if (elegidas[0]) mostrar(elegidas[0].id);
-  };
-  const mostrar = (id) => {
-    const d = porId[id];
-    if (!d || !vistazoImg) return;
-    vistazoImg.src = `${d.fotos[0].src}-600.webp`;
-    vistazoImg.alt = d.titulo;
-    vistazoTexto.textContent = d.detalle;
   };
   filtros.addEventListener("click", (e) => {
     const b = e.target.closest(".filtro");
@@ -112,22 +105,29 @@ document.querySelectorAll("[data-quiero]").forEach((a) => { a.href = quieroUna(a
     filtros.querySelectorAll(".filtro").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
     pintar(b.dataset.cat);
   });
-  const alPasar = (e) => { const b = e.target.closest("[data-vistazo]"); if (b) mostrar(b.dataset.vistazo); };
-  lista.addEventListener("pointerover", alPasar);
-  lista.addEventListener("focusin", alPasar);
   pintar(inicial);
 })();
 
-// Empresas: al pasar por un servicio se lee su descripcion en el espacio de la derecha
+// Servicios: al pasar o tocar un servicio, la foto y el texto de al lado muestran un montaje de ese tipo
 (() => {
   const explica = document.querySelector(".explica p");
-  if (!explica) return;
-  const inicial = explica.textContent;
-  document.querySelectorAll(".grupo li[data-explica]").forEach((li) => {
-    const poner = () => { explica.textContent = li.dataset.explica; };
+  const foto = document.querySelector(".explica img");
+  if (!explica || !foto) return;
+  const servicios = [...document.querySelectorAll(".grupo li[data-explica]")];
+  servicios.forEach((li) => {
+    const poner = () => {
+      servicios.forEach((x) => x.classList.toggle("activo", x === li));
+      explica.textContent = li.dataset.explica;
+      const src = `${li.dataset.foto}-1200.webp`;
+      if (!li.dataset.foto || foto.getAttribute("src") === src) return;
+      const nueva = new Image();
+      nueva.src = src;
+      foto.classList.add("cambiando");
+      nueva.decode().catch(() => {}).then(() => { foto.src = src; foto.alt = li.textContent; foto.classList.remove("cambiando"); });
+    };
     li.addEventListener("pointerenter", poner);
     li.addEventListener("focus", poner);
-    li.addEventListener("pointerleave", () => { explica.textContent = inicial; });
+    li.addEventListener("click", poner);
   });
 })();
 
